@@ -351,5 +351,61 @@ def remove_short_segments(mask, min_length):
     return result
 
       
-        
+import numpy as np
+
+def sobolev_distance(x: np.ndarray, y: np.ndarray, alpha_0=1.0, alpha_1=1.0, alpha_2=1.0):
+    """
+    Compute a Sobolev-type distance between two smooth time series x and y.
+
+    Parameters:
+    ----------
+    x, y : np.ndarray
+        Input time series of the same length.
+    
+    alpha_0 : float
+        Weight on value differences (L2 norm of raw values).
+    
+    alpha_1 : float
+        Weight on first derivative differences (trend/slope).
+    
+    alpha_2 : float
+        Weight on second derivative differences (curvature/acceleration).
+    
+    Returns:
+    -------
+    D : float
+        Total Sobolev-type distance between x and y.
+    
+    components : dict
+        Dictionary with individual contributions:
+        - 'value_diff': raw value differences (L2)
+        - 'slope_diff': first derivative (slope) differences
+        - 'curvature_diff': second derivative (curvature) differences
+    """
+    assert len(x) == len(y), "Time series must be the same length"
+
+    # First derivative (trend)
+    dx = np.diff(x, n=1, prepend=x[0])
+    dy = np.diff(y, n=1, prepend=y[0])
+
+    # Second derivative (curvature)
+    ddx = np.diff(x, n=2, prepend=[x[0], x[1]])
+    ddy = np.diff(y, n=2, prepend=[y[0], y[1]])
+
+    # Compute component distances
+    value_diff = np.sum((x - y) ** 2)
+    slope_diff = np.sum((dx - dy) ** 2)
+    curvature_diff = np.sum((ddx - ddy) ** 2)
+
+    # Combine components with weights
+    D_squared = alpha_0 * value_diff + alpha_1 * slope_diff + alpha_2 * curvature_diff
+    D = np.sqrt(D_squared)
+
+    components = {
+        "value_diff": value_diff,
+        "slope_diff": slope_diff,
+        "curvature_diff": curvature_diff
+    }
+
+    return D, components
 
