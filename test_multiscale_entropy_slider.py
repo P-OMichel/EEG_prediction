@@ -17,7 +17,7 @@ init_size = int(fs * 30)
 scale_max = 5
 
 # Create figure and axes
-fig, (ax_signal, ax_spec, ax_output) = plt.subplots(3, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [1, 1.2, 1]})
+fig, (ax_signal, ax_spec, ax_output, ax_diff) = plt.subplots(4, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [1, 1.2, 1, 1]})
 plt.subplots_adjust(left=0.1, bottom=0.25)
 
 # Plot the full signal
@@ -41,6 +41,13 @@ line2, = ax_output.plot(range(1, scale_max + 1), output2, label='PME')
 ax_output.set_title("Multiscale entropies on Current Window")
 ax_output.set_ylim(0.3,2)
 ax_output.legend()
+
+# Plot initial difference 
+line_diff, = ax_diff.plot(range(1, scale_max + 1), np.array(output1) - np.array(output2), label='MSE-PME')
+ax_diff.set_title("Difference of Multiscale entropies on Current Window")
+ax_diff.axhline(0, color ='orange')
+ax_diff.set_ylim(-1,1)
+ax_diff.legend()
 
 # Create sliders
 axcolor = 'lightgoldenrodyellow'
@@ -70,6 +77,7 @@ def update(val):
     # Update lines
     line1.set_ydata(out1)
     line2.set_ydata(out2)
+    line_diff.set_ydata(np.array(out1) - np.array(out2))
     
     fig.canvas.draw_idle()
 
