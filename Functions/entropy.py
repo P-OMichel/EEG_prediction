@@ -7,6 +7,8 @@ from antropy import (
     perm_entropy,
     spectral_entropy
 )
+from scipy.interpolate import interp1d
+from scipy.integrate import simpson
 
 
 # Entropy functions
@@ -126,3 +128,122 @@ def multiscale_permutation_entropy(signal, max_scale=10, order=3, delay=1):
         mpe.append(pe)
     return mpe
 
+
+
+#--------- extract metrics from multiscale entropy curve
+
+def get_surface_linear(ME):
+
+    y = np.array(ME)
+    n = len(y)
+    x = np.linspace(0, 1, n)  # Assume uniform spacing over [0, 1]
+
+    # Line connecting first and last points
+    slope = (y[-1] - y[0]) / (x[-1] - x[0])
+    intercept = y[0]
+    line = slope * x + intercept
+
+    # Difference: (list - line)
+    diff = y - line
+
+    # Integral of the difference
+    integral = np.trapz(diff, x)
+
+    return integral 
+
+def get_int_cumulative(ME):
+
+    y = np.array(ME)
+    n = len(y)
+    x = np.linspace(0, 1, n)  # Assume uniform spacing over [0, 1]
+
+    cumulative = np.cumsum(y)
+    cumulative = cumulative / cumulative[-1]
+
+    integral = np.trapz(x, cumulative)
+
+    return integral
+
+
+def get_int_cumulative_diff(ME0, ME1):
+
+    y0 = np.array(ME0)
+    y1 = np.array(ME1)
+    y = y0 - y1
+    n = len(y)
+    x = np.linspace(0, 1, n)  # Assume uniform spacing over [0, 1]
+
+    cumulative = np.cumsum(y)
+    cumulative = cumulative / cumulative[-1]
+
+    integral = np.trapz(cumulative, x)
+
+    return integral
+
+def analyze_curves(list1, list2, target_size=20):
+    if len(list1) != len(list2):
+        raise ValueError("Lists must have the same length.")
+    if len(list1) >= target_size:
+        raise ValueError("Original lists must be shorter than target size.")
+    
+    # Interpolation
+    original_x = np.linspace(0, 1, len(list1))
+    target_x = np.linspace(0, 1, target_size)
+    interp1 = interp1d(original_x, list1, kind='linear')
+    interp2 = interp1d(original_x, list2, kind='linear')
+    y1 = interp1(target_x)
+    y2 = interp2(target_x)
+    
+    # Difference
+    diff = y1 - y2
+    abs_diff = np.abs(diff)
+    
+    # Area between the curves
+    area_between = simpson(abs_diff, x=target_x)
+    integral_diff = np.trapz(diff, target_x)
+    
+    
+    # Crossing point (first sign change)
+    sign_diff = np.sign(diff)
+    sign_changes = np.where(np.diff(sign_diff))[0]
+    crossing_index = sign_changes[0] + 1 if len(sign_changes) > 0 else None
+    crossing_position = target_x[crossing_index] if crossing_index is not None else None
+    
+    # Max difference info
+    max_diff_index = np.argmax(abs_diff)
+    max_diff_position = target_x[max_diff_index]
+    
+    # Center of mass of the difference curve (weighted average)
+    center_of_mass_diff = np.sum(target_x * abs_diff) / np.sum(abs_diff)
+
+    center_of_mass_index = np.argmin(np.abs(target_x - center_of_mass_diff))
+
+    # Distance between center of mass and crossing point
+    if crossing_position is not None:
+        center_of_mass_vs_crossing = np.abs(center_of_mass_diff - crossing_position)
+    else:
+        center_of_mass_vs_crossing = None
+
+    # Additional metrics
+    mean_abs_diff = np.mean(abs_diff)
+    max_diff_value = abs_diff[max_diff_index]
+    above_ratio = np.sum(diff > 0) / target_size
+
+    return {
+        # 'interpolated_x': target_x,
+        # 'interpolated_y1': y1,
+        # 'interpolated_y2': y2,
+        # 'difference': diff,
+        'area_between': area_between,
+        'integral_diff': integral_diff,
+        'crossing_index': crossing_index,
+        'crossing_position': crossing_position,
+        'mean_absolute_difference': mean_abs_diff,
+        'max_difference_value': max_diff_value,
+        'max_difference_index': max_diff_index,
+        'max_difference_position': max_diff_position,
+        'center_of_mas_index': center_of_mass_index,
+        'center_of_mass_diff': center_of_mass_diff,
+        'center_of_mass_vs_crossing': center_of_mass_vs_crossing,
+        'list1_mostly_above': above_ratio > 0.5,
+    }

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from Functions.entropy import multiscale_entropy, refined_composite_multiscale_entropy, multiscale_permutation_entropy
+from Functions.entropy import multiscale_entropy, refined_composite_multiscale_entropy, multiscale_permutation_entropy, get_surface_linear
 from Functions.open_file import open_clean_records
 from Functions.time_frequency import spectrogram
 from Functions.filter import filter_butterworth
@@ -59,9 +59,11 @@ for i in range(N_windows):
     #--- compute multiscale entropy metrics
     mse = multiscale_entropy(y, max_scale=scale_max)
     mpe = multiscale_permutation_entropy(y, max_scale=scale_max)
+    int_mse = get_surface_linear(mse)
+    int_mpe = get_surface_linear(mpe)
     #--- plots
-    axes[1].plot(range(1, scale_max + 1), mse, label=" MSE at " + str(start_lists[i]) + 's', marker='o')
-    axes[2].plot(range(1, scale_max + 1), mse, label=" MPE at " + str(start_lists[i]) + 's', marker='o')
+    axes[1].plot(range(1, scale_max + 1), mse, label=" MSE at " + str(start_lists[i]) + 's | ' + str(int_mse), marker='o')
+    axes[2].plot(range(1, scale_max + 1), mse, label=" MPE at " + str(start_lists[i]) + 's | ' + str(int_mpe), marker='o')
 
 axes[1].legend()
 axes[2].legend()
